@@ -1,0 +1,17 @@
+# OS / editor junk
+.DS_Store
+*.log
+*.swp
+
+# dependencies (none are used, but just in case)
+node_modules/
+
+# exploratory scratch files from the early full-solve attempts (not part of the
+# engine, UI, or tests; kept locally, out of the published project)
+capcount.js
+capped.js
+count.js
+measure.js
+sigtable.js
+solve.js
+statespace.js

@@ -1,0 +1,13 @@
+{
+  "name": "minichess-3x6",
+  "version": "1.0.0",
+  "description": "A playable engine for a 3x6 bishops-and-queens chess variant: iterative-deepening alpha-beta search backed by an exact endgame tablebase, with a web UI.",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node --max-old-space-size=2048 server.js",
+    "build:tb": "node --max-old-space-size=2048 build-tablebase.js 5 tb.K5.bin",
+    "test": "node engine.test.js && node tablebase.test.js && node --max-old-space-size=2048 search.test.js && node --max-old-space-size=2048 dtw.test.js tb.K5.bin 5"
+  },
+  "keywords": ["chess-variant", "tablebase", "alpha-beta", "endgame", "game-engine"]
+}

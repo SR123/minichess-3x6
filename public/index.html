@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minichess — 3×6 Bishops &amp; Queens</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>Minichess — 3×6 Bishops &amp; Queens</h1>
+  <div class="sub">Bishops &amp; queens only · capture every enemy piece to win · bishops promote on the far rank</div>
+
+  <div class="layout">
+    <div class="left">
+      <div id="board" class="board"></div>
+
+      <div id="status" class="status"></div>
+      <div id="verdict" class="verdict"></div>
+      <div id="info" class="info"></div>
+
+      <div class="nav">
+        <button id="navStart" title="Start">&#x23EE;</button>
+        <button id="navPrev" title="Previous">&#x25C0;</button>
+        <button id="navNext" title="Next">&#x25B6;</button>
+        <button id="navEnd" title="Latest">&#x23ED;</button>
+        <span id="navLabel" class="navLabel"></span>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="moves-head">Moves</div>
+      <ol id="moves" class="moves"></ol>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label>Play as
+      <select id="side">
+        <option value="w" selected>White (move first)</option>
+        <option value="b">Black</option>
+      </select>
+    </label>
+    <label>Engine
+      <select id="level">
+        <option value="300">Fast (0.3s)</option>
+        <option value="1500" selected>Normal (1.5s)</option>
+        <option value="4000">Strong (4s)</option>
+        <option value="10000">Max (10s)</option>
+      </select>
+    </label>
+    <button id="new">New game</button>
+    <button id="save">Save game</button>
+    <button id="load">Load game</button>
+    <input id="loadFile" type="file" accept="application/json,.json" hidden>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
