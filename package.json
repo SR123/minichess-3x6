@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node --max-old-space-size=2048 server.js",
     "build:tb": "node --max-old-space-size=2048 build-tablebase.js 5 tb.K5.bin",
-    "test": "node engine.test.js && node tablebase.test.js && node --max-old-space-size=2048 search.test.js && node --max-old-space-size=2048 dtw.test.js tb.K5.bin 5 && node --max-old-space-size=2048 dtw-forceplay.test.js tb.K5.bin 5",
+    "test": "node engine.test.js && node tablebase.test.js && node --max-old-space-size=2048 search.test.js && node --max-old-space-size=2048 dtw.test.js tb.K5.bin 5 && node --max-old-space-size=2048 dtw-forceplay.test.js tb.K5.bin 5 && node --max-old-space-size=2048 study.test.js tb.K5.bin 5",
     "hardest": "node --max-old-space-size=2048 hardest.js tb.K5.bin 5"
   },
   "keywords": ["chess-variant", "tablebase", "alpha-beta", "endgame", "game-engine"]
