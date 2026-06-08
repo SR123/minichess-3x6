@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Endgame Study — Minichess 3×6</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/study.css">
+</head>
+<body>
+  <h1>Endgame Study — 3×6 Bishops &amp; Queens</h1>
+  <div class="sub">Exact distance-to-win tablebase · longest forced win for every material class · <a href="/">← back to play</a></div>
+
+  <div class="study-layout">
+    <!-- left: material classes -->
+    <div class="classes-col">
+      <div class="col-head">Endgame types</div>
+      <div id="classes" class="classes"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- center: board + playthrough -->
+    <div class="board-col">
+      <div id="className" class="class-name"></div>
+      <div id="board" class="board"></div>
+      <div id="verdict" class="verdict"></div>
+      <div id="dtwline" class="dtwline"></div>
+
+      <div class="play-controls">
+        <button id="reset" title="Reset to start">&#x23EE;</button>
+        <button id="back" title="Step back">&#x25C0;</button>
+        <button id="play" title="Play / pause">&#x25B6;</button>
+        <button id="step" title="Step forward (optimal)">&#x25B6;&#x2758;</button>
+        <button id="toend" title="Play to wipeout">&#x23ED;</button>
+      </div>
+      <div id="plyline" class="plyline"></div>
+    </div>
+
+    <!-- right: per-move outcomes -->
+    <div class="moves-col">
+      <div class="col-head">Every legal move · exact outcome</div>
+      <div class="moves-hint">from the side-to-move's view · best first · ✓ = optimal</div>
+      <ol id="moveList" class="move-list"></ol>
+    </div>
+  </div>
+
+  <script src="/study.js"></script>
+</body>
+</html>

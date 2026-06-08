@@ -27,6 +27,7 @@ const path = require('path');
 const engine = require('./engine');
 const { Engine, packKey } = require('./search');
 const { Tablebase } = require('./tbprobe');
+const study = require('./tbstudy');
 
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const THINK_MS = Number(process.env.THINK_MS || 1500);
@@ -94,6 +95,49 @@ function tbInfo(state) {
   return { result: 'decisive', winner, plies: pr.dtw, moves: Math.ceil(pr.dtw / 2) };
 }
 
+// ---- endgame study ---------------------------------------------------------
+const other = (s) => (s === 'w' ? 'b' : 'w');
+
+// The per-class longest-win index. Built once (a full tablebase scan, ~10s for
+// K5) on the first /api/study/classes request, then cached. Only classes that
+// have a forced win are listed (a wholly-drawn class has nothing to study).
+let STUDY_INDEX = null;
+function studyClasses() {
+  if (!tb.loaded) return [];
+  if (!STUDY_INDEX) {
+    console.log('Building endgame study index (one-time tablebase scan)...');
+    const t = Date.now();
+    STUDY_INDEX = study.buildClassIndex(tb)
+      .filter((c) => c.hardest)
+      .map((c) => ({
+        name: c.name, pieces: c.pieces, counts: c.counts, maxDtw: c.maxDtw, maxMoves: c.maxMoves,
+        hardest: { board: c.hardest.board, turn: c.hardest.turn, winner: c.hardest.winner },
+      }));
+    console.log(`  study index: ${STUDY_INDEX.length} classes in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+  }
+  return STUDY_INDEX;
+}
+
+// Absolute probe summary for a position (which colour wins, in how many plies).
+function studyProbe(state) {
+  const pr = tb.loaded ? tb.probe(state.board, state.turn) : null;
+  if (!pr) return null;
+  if (pr.result === 'draw') return { result: 'draw', winner: null, plies: 0, moves: 0 };
+  const winner = pr.result === 'win' ? state.turn : other(state.turn);
+  return { result: pr.result, winner, plies: pr.dtw, moves: Math.ceil(pr.dtw / 2) };
+}
+
+// Full study analysis of a position: per-move outcomes (sorted best-first) plus
+// the position's own verdict, or a terminal marker once a side is wiped out.
+function studyAnalyze(state) {
+  const w = engine.countPieces(state, 'w'), b = engine.countPieces(state, 'b');
+  if (w === 0 || b === 0) {
+    return { board: state.board, turn: state.turn, terminal: true, winner: w === 0 ? 'b' : 'w', probe: null, moves: [], optimalIndex: -1 };
+  }
+  const a = study.analyze(tb, state);
+  return { board: state.board, turn: state.turn, terminal: false, winner: null, probe: studyProbe(state), moves: a.moves, optimalIndex: a.optimalIndex };
+}
+
 // Build a response payload describing a position + legal moves + status.
 function describe(state, history) {
   const status = statusOf(state, history);
@@ -111,6 +155,10 @@ const STATIC = {
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/app.js': ['app.js', 'application/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
+  '/study': ['study.html', 'text/html; charset=utf-8'],
+  '/study.html': ['study.html', 'text/html; charset=utf-8'],
+  '/study.js': ['study.js', 'application/javascript; charset=utf-8'],
+  '/study.css': ['study.css', 'text/css; charset=utf-8'],
 };
 
 const server = http.createServer(async (req, res) => {
@@ -123,6 +171,20 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': type });
         res.end(buf);
       });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/study/classes') {
+      sendJson(res, 200, { loaded: tb.loaded, K: tb.K, classes: studyClasses() });
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/study/analyze') {
+      const body = await readBody(req);
+      if (!Array.isArray(body.board) || (body.turn !== 'w' && body.turn !== 'b')) {
+        sendJson(res, 400, { error: 'expected {board, turn}' }); return;
+      }
+      sendJson(res, 200, studyAnalyze({ board: body.board.slice(), turn: body.turn }));
       return;
     }
 

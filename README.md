@@ -31,6 +31,17 @@ Then open `http://localhost:<port>`. Pick your colour and the engine's thinking
 time, click a piece, then a highlighted square. `THINK_MS=<ms>` sets the default
 move budget.
 
+### Endgame study
+
+Open `http://localhost:<port>/study` (or the "endgame study →" link) for a
+tablebase-driven study of every material class: each class's **longest forced
+win** (max distance-to-win), a **play/pause/step** walkthrough of the optimal
+line under best play by *both* sides (winner minimising DTW, loser stalling)
+ending in a wipeout in exactly DTW plies, and — for every position along the way
+— a list of **every legal move with its exact outcome** ("win in 19 plies",
+"draw", "loss in 28 plies"), sorted best-first. All values come from real probes
+(`tbstudy.js`), validated by `study.test.js`.
+
 The UI also shows, whenever the position is within the endgame tablebase, the
 **exact verdict and distance** — e.g. "White wins — mate in 7 moves (13 plies,
 optimal play)" or "Theoretical draw". Every move is recorded in a **move list**

@@ -14,6 +14,8 @@ body {
 }
 h1 { font-weight: 600; font-size: 20px; margin: 0; letter-spacing: .3px; }
 .sub { color: #aaa; font-size: 13px; margin-top: -8px; }
+.sub a { color: #6fa8dc; text-decoration: none; }
+.sub a:hover { text-decoration: underline; }
 
 .board {
   display: grid;
