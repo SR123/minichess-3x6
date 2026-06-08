@@ -170,7 +170,7 @@ function renderMoveList() {
     li.className = 'move ' + m.result + (idx === analysis.optimalIndex ? ' optimal' : '');
     li.innerHTML = `<span class="mark">${idx === analysis.optimalIndex ? '✓' : ''}</span>` +
       `<span class="san">${m.san}</span><span class="oc">${outcomeText(m)}</span>`;
-    li.addEventListener('click', () => takeMove(m));
+    li.addEventListener('click', () => { stopPlay(); takeMove(m); });
     moveListEl.appendChild(li);
   });
 }
