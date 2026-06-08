@@ -42,6 +42,25 @@ ending in a wipeout in exactly DTW plies, and — for every position along the w
 "draw", "loss in 28 plies"), sorted best-first. All values come from real probes
 (`tbstudy.js`), validated by `study.test.js`.
 
+#### Featherweight (static, browser-only) version — `docs/`
+
+`docs/` is a **no-server, fully browser-side** build of the study tool that uses
+only the small **K3** tablebase (≤ 3 pieces, 237 KB), so it can deploy to GitHub
+Pages as-is. The probe, per-move analysis, optimal-line playthrough, and the
+ranked per-move outcome list all run client-side (`docs/{engine,tablebase,study,
+ui}.js` fetch `docs/tb.K3.bin`). It carries a banner noting it's the ≤ 3-piece
+build and that the full **K5** version (≤ 5 pieces, deepest wins **54 plies / 27
+moves**) runs locally from this repo.
+
+* **Deploy:** repo *Settings → Pages → Build and deployment → Deploy from a
+  branch → `main` / `/docs`*. The site is then served at the Pages URL.
+* **Run locally:** any static server over the `docs/` folder, e.g.
+  `cd docs && python3 -m http.server` then open `localhost:8000`. (Opening
+  `index.html` via `file://` won't work — browsers block the `tb.K3.bin` fetch.)
+* **Parity:** `docs-parity.test.js` (in `npm test`) proves the browser port's
+  probe, `analyze`, optimal lines, and class index match the server code exactly
+  on every K3 position. The full server-based K5 study page is left untouched.
+
 The UI also shows, whenever the position is within the endgame tablebase, the
 **exact verdict and distance** — e.g. "White wins — mate in 7 moves (13 plies,
 optimal play)" or "Theoretical draw". Every move is recorded in a **move list**

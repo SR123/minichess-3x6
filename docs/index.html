@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Endgame Study (featherweight) — Minichess 3×6</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <h1>Endgame Study — 3×6 Bishops &amp; Queens</h1>
+  <div class="sub">Exact distance-to-win tablebase · runs entirely in your browser, no server</div>
+
+  <div class="banner">
+    <strong>Featherweight build (≤ 3 pieces).</strong> This static page ships only the
+    237&nbsp;KB <code>K3</code> tablebase, so it covers endgames with at most three pieces
+    (longest forced win: 20 plies / 10 moves) and runs with no backend — perfect for
+    GitHub&nbsp;Pages. The <strong>full <code>K5</code> version</strong> (≤ 5 pieces, 17.9M
+    positions, deepest wins up to <strong>54 plies / 27 moves</strong>) runs locally from the
+    repo: <code>npm start</code> → <code>localhost:8080/study</code>.
+    <a href="https://github.com/SR123/minichess-3x6" target="_blank" rel="noopener">Source &amp; full version on GitHub →</a>
+  </div>
+
+  <div class="study-layout">
+    <div class="classes-col">
+      <div class="col-head">Endgame types</div>
+      <div id="classes" class="classes"><div class="loading">Loading…</div></div>
+    </div>
+
+    <div class="board-col">
+      <div id="className" class="class-name"></div>
+      <div id="board" class="board"></div>
+      <div id="verdict" class="verdict"></div>
+      <div id="dtwline" class="dtwline"></div>
+      <div class="play-controls">
+        <button id="reset" title="Reset to start">&#x23EE;</button>
+        <button id="back" title="Step back">&#x25C0;</button>
+        <button id="play" title="Play / pause">&#x25B6;</button>
+        <button id="step" title="Step forward (optimal)">&#x25B6;&#x2758;</button>
+        <button id="toend" title="Play to wipeout">&#x23ED;</button>
+      </div>
+      <div id="plyline" class="plyline"></div>
+    </div>
+
+    <div class="moves-col">
+      <div class="col-head">Every legal move · exact outcome</div>
+      <div class="moves-hint">from the side-to-move's view · best first · ✓ = optimal</div>
+      <ol id="moveList" class="move-list"></ol>
+    </div>
+  </div>
+
+  <script src="engine.js"></script>
+  <script src="tablebase.js"></script>
+  <script src="study.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
