@@ -149,9 +149,9 @@ function rootVerdict(score) {
       const r = tb.probe(ch.board, ch.turn);
       let rank;
       if (!r) rank = [1, 0];
-      else if (r.result === 'loss') rank = [3, r.dtc]; // forced to lose -> delay
+      else if (r.result === 'loss') rank = [3, r.dtw]; // forced to lose -> delay
       else if (r.result === 'draw') rank = [2, 0];     // hold the draw
-      else rank = [0, r.dtc];                          // defender winning
+      else rank = [0, r.dtw];                          // defender winning
       if (bestRank === null || rank[0] > bestRank[0] || (rank[0] === bestRank[0] && rank[1] > bestRank[1])) {
         bestRank = rank; best = m;
       }

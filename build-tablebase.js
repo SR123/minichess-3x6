@@ -8,7 +8,7 @@
  *   a move never increases the piece count (captures decrease it, promotions
  *   keep it equal while turning a bishop into a queen, quiet moves keep it the
  *   same). So a <=K position's value depends only on other <=K positions, and
- *   we can solve the whole set with the retrograde WLD+DTC solver in
+ *   we can solve the whole set with the retrograde WLD+DTW solver in
  *   tablebase.js (solveAll), which is cross-checked against brute-force minimax
  *   (with the twofold-repetition draw) in solver.test.js. No reachability
  *   argument and no move history are needed.
@@ -16,15 +16,19 @@
  * Sizes (live = both sides have >=1 piece, the only positions ever probed):
  *   K=4 -> 1.45M positions, K=5 -> 17.9M. Stored DENSELY: per live signature we
  *   keep a perfect combinatorial index (rankBoard) so NO keys are stored, only
- *   val (Uint8) + dtc (Int16). K=5 lands at ~54 MB on disk.
+ *   val (Uint8) + dtw (Int16). K=5 lands at ~54 MB on disk.
  *
  * Output file format (little-endian), default tb.K5.bin:
- *   magic   uint32  0x54434233 ('TCB3')
+ *   magic   uint32  0x54434234 ('TCB4')   -- v4: the distance field is a true
+ *                                            distance-to-WIN (plies to wipeout),
+ *                                            not the old flattened conversion
+ *                                            distance. Same byte layout as v3;
+ *                                            only the semantic guarantee changed.
  *   K       uint32
  *   nSigs   uint32                       (number of LIVE signatures stored)
  *   nSigs * { sig uint32, n2 uint32 }     n2 = permCount(sig) * 2  (val length)
  *   val  block: for each sig in order, n2 bytes (0..3 WLD codes)
- *   dtc  block: for each sig in order, n2 * 2 bytes (Int16LE)
+ *   dtw  block: for each sig in order, n2 * 2 bytes (Int16LE)
  *
  * Run under the 2 GB cap:  node --max-old-space-size=2048 build-tablebase.js [K]
  */
@@ -38,7 +42,7 @@ const {
 
 const K = Number(process.argv[2] || 5);
 const OUT = process.argv[3] || `tb.K${K}.bin`;
-const MAGIC = 0x54434233;
+const MAGIC = 0x54434234; // 'TCB4' -- distance field is distance-to-win (DTW)
 
 function log(...a) { console.log(...a); }
 
@@ -85,23 +89,23 @@ function build() {
       keys[k++] = bn * 2 + 1; // black to move
     }
     keys.sort();
-    layers.set(sig, { keys, val: null, dtc: null });
+    layers.set(sig, { keys, val: null, dtw: null });
     totalPos += keys.length;
   }
   log(`  enumerated ${totalPos.toLocaleString()} positions in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
-  // ---- solve exactly (retrograde WLD + DTC), reusing the tested solver ----
+  // ---- solve exactly (retrograde WLD + DTW), reusing the tested solver ----
   solveAll(layers, { log });
 
-  // ---- reindex LIVE signatures into dense rank-indexed val/dtc, write ----
+  // ---- reindex LIVE signatures into dense rank-indexed val/dtw, write ----
   const live = sigs
     .filter(([wQ, wB, bQ, bB]) => (wQ + wB) > 0 && (bQ + bB) > 0)
     .map((c) => sigKeyOf(...c));
 
   const headerEntries = [];
   const valBlocks = [];
-  const dtcBlocks = [];
-  let maxDtc = 0;
+  const dtwBlocks = [];
+  let maxDtw = 0;
   let liveTotal = 0;
 
   for (const sig of live) {
@@ -110,7 +114,7 @@ function build() {
     const perm = permCountForSig(wQ, wB, bQ, bB);
     const n2 = perm * 2;
     const denseVal = new Uint8Array(n2);
-    const denseDtc = new Int16Array(n2);
+    const denseDtw = new Int16Array(n2);
     for (let i = 0; i < L.keys.length; i++) {
       const key = L.keys[i];
       const side = key % 2;
@@ -120,19 +124,19 @@ function build() {
       for (let c = 0; c < SIZE; c++) { board[c] = n % 5; n = (n - board[c]) / 5; }
       const idx = rankBoard(board) * 2 + side;
       denseVal[idx] = L.val[i];
-      const d = L.dtc[i];
-      if (d > maxDtc) maxDtc = d;
-      denseDtc[idx] = d;
+      const d = L.dtw[i];
+      if (d > maxDtw) maxDtw = d;
+      denseDtw[idx] = d;
     }
     headerEntries.push([sig, n2]);
     valBlocks.push(Buffer.from(denseVal.buffer, denseVal.byteOffset, denseVal.byteLength));
-    dtcBlocks.push(Buffer.from(denseDtc.buffer, denseDtc.byteOffset, denseDtc.byteLength));
+    dtwBlocks.push(Buffer.from(denseDtw.buffer, denseDtw.byteOffset, denseDtw.byteLength));
     liveTotal += n2;
     // free the solved layer's heavy arrays as we go
     layers.delete(sig);
   }
 
-  if (maxDtc > 32000) throw new Error(`DTC ${maxDtc} overflows Int16; widen dtc storage.`);
+  if (maxDtw > 32000) throw new Error(`DTW ${maxDtw} overflows Int16; widen dtw storage.`);
 
   const head = Buffer.alloc(12 + headerEntries.length * 8);
   head.writeUInt32LE(MAGIC, 0);
@@ -143,10 +147,10 @@ function build() {
     head.writeUInt32LE(sig, off); head.writeUInt32LE(n2, off + 4); off += 8;
   }
 
-  const all = Buffer.concat([head, ...valBlocks, ...dtcBlocks]);
+  const all = Buffer.concat([head, ...valBlocks, ...dtwBlocks]);
   fs.writeFileSync(OUT, all);
 
-  log(`  live signatures: ${live.length}, ${liveTotal.toLocaleString()} probed positions, maxDTC=${maxDtc}`);
+  log(`  live signatures: ${live.length}, ${liveTotal.toLocaleString()} probed positions, maxDTW=${maxDtw}`);
   log(`  wrote ${OUT}  (${(all.length / 1e6).toFixed(1)} MB)  in ${((Date.now() - t0) / 1000).toFixed(1)}s total`);
 }
 

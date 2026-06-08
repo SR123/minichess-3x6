@@ -83,7 +83,7 @@ function readBody(req) {
 
 // Exact tablebase verdict for the position, in ABSOLUTE terms (which colour wins
 // and in how many plies/moves), or null if the position is out of the tablebase.
-// `dtc` is a true distance-to-win: plies to wipeout under optimal play.
+// `dtw` is a true distance-to-win: plies to wipeout under optimal play.
 function tbInfo(state) {
   if (!tb.loaded) return null;
   const pr = tb.probe(state.board, state.turn);
@@ -91,7 +91,7 @@ function tbInfo(state) {
   if (pr.result === 'draw') return { result: 'draw', plies: 0, moves: 0, winner: null };
   // 'win' is for the side to move; 'loss' means the other side wins.
   const winner = pr.result === 'win' ? state.turn : (state.turn === 'w' ? 'b' : 'w');
-  return { result: 'decisive', winner, plies: pr.dtc, moves: Math.ceil(pr.dtc / 2) };
+  return { result: 'decisive', winner, plies: pr.dtw, moves: Math.ceil(pr.dtw / 2) };
 }
 
 // Build a response payload describing a position + legal moves + status.

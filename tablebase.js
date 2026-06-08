@@ -245,7 +245,7 @@ function startKey() {
 
 // ---------------------------------------------------------------------------
 // Left-right mirror symmetry (swap columns a<->c). The rules and the start
-// position are symmetric under this fold, so WLD/DTC values are mirror-
+// position are symmetric under this fold, so WLD/DTW values are mirror-
 // invariant and we store one canonical representative per mirror pair.
 // ---------------------------------------------------------------------------
 const MIRROR = new Int8Array(SIZE);
@@ -403,7 +403,7 @@ function forwardEnumerate(opts = {}) {
     let k = 0;
     for (const shard of s.sets) { for (const key of shard) arr[k++] = key; shard.clear(); }
     arr.sort();
-    layers.set(sig, { keys: arr, val: null, dtc: null });
+    layers.set(sig, { keys: arr, val: null, dtw: null });
   }
   sets.clear();
   return { layers, total: totalSeen };
@@ -414,14 +414,14 @@ const UNKNOWN = 0, WIN = 1, LOSS = 2, DRAW = 3;
 
 // Solve every layer by retrograde WLD analysis (value from the side to move),
 // in topological order (totalPieces asc, totalBishops asc). Fills layer.val and
-// layer.dtc in place. Cross-layer (capture/promotion) successors are read from
+// layer.dtw in place. Cross-layer (capture/promotion) successors are read from
 // already-solved smaller layers; same-layer (quiet) successors are resolved by
 // the within-layer worklist fixpoint; the residual loop is DRAW.
 //
-// `dtc` holds a true distance-to-win (DTW): plies to wipeout under optimal play.
-// WIN  node: dtc = 1 + MIN child dtc over winning (opponent-LOSS) successors.
-// LOSS node: dtc = 1 + MAX child dtc over its (all-winning) successors.
-// DRAW node: dtc = 0. A terminal wipeout child has dtc 0, so capturing the last
+// `dtw` holds a true distance-to-win (DTW): plies to wipeout under optimal play.
+// WIN  node: dtw = 1 + MIN child dtw over winning (opponent-LOSS) successors.
+// LOSS node: dtw = 1 + MAX child dtw over its (all-winning) successors.
+// DRAW node: dtw = 0. A terminal wipeout child has dtw 0, so capturing the last
 // enemy piece is a win in 1. This monotone distance is what lets the search make
 // progress (it strictly prefers shorter wins) instead of shuffling among equal
 // "winning" moves -- a distance-to-CONVERSION would flatten all winning
@@ -436,11 +436,11 @@ function solveAll(layers, opts = {}) {
   }
   sigs.sort((a, b) => a.total - b.total || a.bishops - b.bishops || a.sig - b.sig);
 
-  // allocate value/dtc arrays
+  // allocate value/dtw arrays
   for (const { sig } of sigs) {
     const L = layers.get(sig);
     L.val = new Uint8Array(L.keys.length); // 0 = UNKNOWN
-    L.dtc = new Int32Array(L.keys.length);
+    L.dtw = new Int32Array(L.keys.length);
   }
 
   function lookup(sig, key) {
@@ -449,10 +449,10 @@ function solveAll(layers, opts = {}) {
     return L.val[i]; // child layer already solved
   }
   // distance-to-win of an already-solved cross-layer child
-  function lookupDtc(sig, key) {
+  function lookupDtw(sig, key) {
     const L = layers.get(sig);
     const i = bsearch(L.keys, key);
-    return L.dtc[i];
+    return L.dtw[i];
   }
 
   const board = new Int8Array(SIZE);
@@ -461,7 +461,7 @@ function solveAll(layers, opts = {}) {
 
   for (const { sig, total, bishops } of sigs) {
     const L = layers.get(sig);
-    const keys = L.keys, val = L.val, dtc = L.dtc, n = keys.length;
+    const keys = L.keys, val = L.val, dtw = L.dtw, n = keys.length;
     const counter = new Int32Array(n);       // # successors not yet known WIN-for-opp
     const maxContrib = new Int32Array(n).fill(-1); // max child DTW over WIN-for-opp successors
     const processed = new Uint8Array(n);     // propagated-to-predecessors yet?
@@ -484,8 +484,8 @@ function solveAll(layers, opts = {}) {
       const counts = countsOf(board);
       const moverZero = side === 0 ? counts[0] + counts[1] === 0 : counts[2] + counts[3] === 0;
       const oppZero = side === 0 ? counts[2] + counts[3] === 0 : counts[0] + counts[1] === 0;
-      if (oppZero) { val[idx] = WIN; dtc[idx] = 0; push(0, idx); continue; }
-      if (moverZero) { val[idx] = LOSS; dtc[idx] = 0; push(0, idx); continue; }
+      if (oppZero) { val[idx] = WIN; dtw[idx] = 0; push(0, idx); continue; }
+      if (moverZero) { val[idx] = LOSS; dtw[idx] = 0; push(0, idx); continue; }
 
       const boardNum = (key - side) / 2;
       const succ = genSuccessors(board, side, counts, boardNum);
@@ -494,7 +494,7 @@ function solveAll(layers, opts = {}) {
         cnt++;
         if (succ[s].sig === sig) continue; // same-layer: deferred to propagation
         const cv = lookup(succ[s].sig, succ[s].key);
-        const cd = lookupDtc(succ[s].sig, succ[s].key);
+        const cd = lookupDtw(succ[s].sig, succ[s].key);
         if (cv === LOSS) {                       // conversion to opp loss -> win in 1+cd
           const wd = 1 + cd;
           if (convWin < 0 || wd < convWin) convWin = wd;
@@ -512,7 +512,7 @@ function solveAll(layers, opts = {}) {
       }
       if (counter[idx] === 0) {
         // every successor is a WIN-for-opp conversion -> forced LOSS (max child DTW)
-        val[idx] = LOSS; dtc[idx] = 1 + (mc < 0 ? 0 : mc); push(dtc[idx], idx);
+        val[idx] = LOSS; dtw[idx] = 1 + (mc < 0 ? 0 : mc); push(dtw[idx], idx);
       }
     }
 
@@ -524,23 +524,23 @@ function solveAll(layers, opts = {}) {
       if (!bk) continue;
       for (let qi = 0; qi < bk.length; qi++) {
         const idx = bk[qi];
-        if (val[idx] === UNKNOWN) { val[idx] = WIN; dtc[idx] = d; } // conversion-win candidate
+        if (val[idx] === UNKNOWN) { val[idx] = WIN; dtw[idx] = d; } // conversion-win candidate
         if (processed[idx]) continue;
         processed[idx] = true;
         const key = keys[idx];
         const side = unpackInto(key, board);
         const boardNum = (key - side) / 2;
         const preds = genQuietPredecessors(board, side, boardNum);
-        const vIdx = val[idx], dIdx = dtc[idx];
+        const vIdx = val[idx], dIdx = dtw[idx];
         for (let p = 0; p < preds.length; p++) {
           const pIdx = bsearch(keys, preds[p]);
           if (pIdx < 0 || val[pIdx] !== UNKNOWN) continue;
           if (vIdx === LOSS) {
-            val[pIdx] = WIN; dtc[pIdx] = 1 + dIdx; push(dtc[pIdx], pIdx);
+            val[pIdx] = WIN; dtw[pIdx] = 1 + dIdx; push(dtw[pIdx], pIdx);
           } else { // vIdx === WIN
             counter[pIdx]--;
             if (dIdx > maxContrib[pIdx]) maxContrib[pIdx] = dIdx;
-            if (counter[pIdx] === 0) { val[pIdx] = LOSS; dtc[pIdx] = 1 + maxContrib[pIdx]; push(dtc[pIdx], pIdx); }
+            if (counter[pIdx] === 0) { val[pIdx] = LOSS; dtw[pIdx] = 1 + maxContrib[pIdx]; push(dtw[pIdx], pIdx); }
           }
         }
       }
@@ -549,7 +549,7 @@ function solveAll(layers, opts = {}) {
     // ---- remaining unknown positions are draws (unforced loops) ----
     let nW = 0, nL = 0, nD = 0;
     for (let idx = 0; idx < n; idx++) {
-      if (val[idx] === UNKNOWN) { val[idx] = DRAW; dtc[idx] = 0; nD++; }
+      if (val[idx] === UNKNOWN) { val[idx] = DRAW; dtw[idx] = 0; nD++; }
       else if (val[idx] === WIN) nW++; else if (val[idx] === LOSS) nL++; else nD++;
     }
 

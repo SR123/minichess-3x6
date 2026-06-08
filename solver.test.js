@@ -13,7 +13,7 @@ function check(name, cond, detail) {
   else { failed++; console.log(`  FAIL ${name}${detail ? '  -> ' + detail : ''}`); }
 }
 
-// forward closure from one or more start keys -> layers map {sig:{keys,val,dtc}}
+// forward closure from one or more start keys -> layers map {sig:{keys,val,dtw}}
 function enumerateFrom(startKeys, cap) {
   const sets = new Map();
   const board = new Int8Array(18);
@@ -40,7 +40,7 @@ function enumerateFrom(startKeys, cap) {
   const layers = new Map();
   for (const [sig, s] of sets) {
     const arr = Float64Array.from(s); arr.sort();
-    layers.set(sig, { keys: arr, val: null, dtc: null });
+    layers.set(sig, { keys: arr, val: null, dtw: null });
   }
   return layers;
 }
@@ -139,11 +139,11 @@ console.log(`  verified verdicts: W=${tally.W} L=${tally.L} D=${tally.D}  (skipp
 check(`solveAll agrees with brute force (${setsTested} closed sets, ${totalChecked} positions)`,
   totalMismatch === 0, `${totalMismatch} mismatches`);
 
-// DTC sanity: from any WIN position, some move leads to a LOSS child with
-// strictly smaller DTC (or a conversion), guaranteeing progress.
+// DTW sanity: from any WIN position, some move leads to a LOSS child with
+// strictly smaller DTW (or a conversion), guaranteeing progress.
 (function () {
   const layers = enumerateFrom([randomStartKey(1, 1, 1, 1)], 400000);
-  if (!layers) { check('DTC progress (skipped, closure too big)', true); return; }
+  if (!layers) { check('DTW progress (skipped, closure too big)', true); return; }
   tb.solveAll(layers, {});
   const board = new Int8Array(18);
   function look(key) {
@@ -152,7 +152,7 @@ check(`solveAll agrees with brute force (${setsTested} closed sets, ${totalCheck
     const L = layers.get(tb.sigKeyOf(c[0], c[1], c[2], c[3]));
     if (!L) return null;
     const i = tb.bsearch(L.keys, key);
-    return i < 0 ? null : { val: L.val[i], dtc: L.dtc[i], sig: tb.sigKeyOf(c[0], c[1], c[2], c[3]) };
+    return i < 0 ? null : { val: L.val[i], dtw: L.dtw[i], sig: tb.sigKeyOf(c[0], c[1], c[2], c[3]) };
   }
   let ok = true, tested = 0;
   for (const [sig, L] of layers) {
@@ -163,22 +163,22 @@ check(`solveAll agrees with brute force (${setsTested} closed sets, ${totalCheck
       const side = tb.unpackInto(key, board);
       const counts = tb.countsOf(board);
       const boardNum = (key - side) / 2;
-      const myDtc = L.dtc[i];
-      // find a winning move: child is LOSS, and dtc decreases (conversion or quiet)
+      const myDtw = L.dtw[i];
+      // find a winning move: child is LOSS, and dtw decreases (conversion or quiet)
       let good = false;
       for (const s of tb.genSuccessors(board, side, counts, boardNum)) {
         const cr = look(s.key);
         if (cr && cr.val === tb.LOSS) {
-          const childContrib = (cr.sig !== sig) ? 0 : cr.dtc; // conversion contributes 0
-          if (1 + childContrib === myDtc) { good = true; break; }
+          const childContrib = (cr.sig !== sig) ? 0 : cr.dtw; // conversion contributes 0
+          if (1 + childContrib === myDtw) { good = true; break; }
         }
       }
-      if (!good) { ok = false; console.log(`     DTC: WIN ${engine.serialize(keyToEngineState(key))} dtc=${myDtc} has no matching winning move`); }
+      if (!good) { ok = false; console.log(`     DTW: WIN ${engine.serialize(keyToEngineState(key))} dtw=${myDtw} has no matching winning move`); }
       if (tested > 5000) break;
     }
     if (!ok) break;
   }
-  check(`DTC of WIN positions matches a real winning move (${tested} checked)`, ok);
+  check(`DTW of WIN positions matches a real winning move (${tested} checked)`, ok);
 })();
 
 console.log('');

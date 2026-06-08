@@ -17,7 +17,7 @@ const path = require('path');
 const tb = require('./tablebase');
 const { SIZE, sigKeyOf, rankBoard, WIN, LOSS, DRAW } = tb;
 
-const MAGIC = 0x54434233;
+const MAGIC = 0x54434234; // 'TCB4' -- distance field is distance-to-win (DTW)
 
 // piece string -> cell code
 function codeOf(piece) {
@@ -34,7 +34,7 @@ function codeOf(piece) {
 class Tablebase {
   constructor() {
     this.K = 0;
-    this.sigs = new Map(); // sig -> { val: Uint8Array, dtc: Int16Array }
+    this.sigs = new Map(); // sig -> { val: Uint8Array, dtw: Int16Array }
     this.loaded = false;
     this._board = new Int8Array(SIZE);
   }
@@ -42,7 +42,16 @@ class Tablebase {
   // Load a tb.K*.bin file. Returns this. Throws if the file is malformed.
   load(file) {
     const buf = fs.readFileSync(file);
-    if (buf.readUInt32LE(0) !== MAGIC) throw new Error(`${file}: bad magic`);
+    const magic = buf.readUInt32LE(0);
+    if (magic !== MAGIC) {
+      if (magic === 0x54434233) {
+        throw new Error(
+          `${file}: stale 'TCB3' tablebase. The format is now 'TCB4' (the ` +
+          `distance field is guaranteed distance-to-win). Rebuild it:\n` +
+          `  node --max-old-space-size=2048 build-tablebase.js ${buf.readUInt32LE(4)} ${file}`);
+      }
+      throw new Error(`${file}: bad magic 0x${magic.toString(16)} (expected 'TCB4')`);
+    }
     this.K = buf.readUInt32LE(4);
     const nSigs = buf.readUInt32LE(8);
     const entries = [];
@@ -56,15 +65,15 @@ class Tablebase {
       const val = new Uint8Array(n2);
       buf.copy(Buffer.from(val.buffer), 0, off, off + n2);
       off += n2;
-      this.sigs.set(sig, { val, dtc: null, n2 });
+      this.sigs.set(sig, { val, dtw: null, n2 });
     }
-    // dtc block
+    // dtw block
     for (const [sig, n2] of entries) {
-      const dtc = new Int16Array(n2);
+      const dtw = new Int16Array(n2);
       // copy n2*2 bytes
-      Buffer.from(dtc.buffer).set(buf.subarray(off, off + n2 * 2));
+      Buffer.from(dtw.buffer).set(buf.subarray(off, off + n2 * 2));
       off += n2 * 2;
-      this.sigs.get(sig).dtc = dtc;
+      this.sigs.get(sig).dtw = dtw;
     }
     this.loaded = true;
     this.maxPieces = this.K;
@@ -85,7 +94,7 @@ class Tablebase {
   }
 
   // Probe an engine board (Array(18) of piece|null) with side to move
-  // ('w'|'b'). Returns { result: 'win'|'loss'|'draw', dtc } from the side to
+  // ('w'|'b'). Returns { result: 'win'|'loss'|'draw', dtw } from the side to
   // move's perspective, or null if the position is out of the tablebase
   // (more than K pieces, or a side already wiped out -> caller handles those).
   probe(board, turn) {
@@ -107,10 +116,10 @@ class Tablebase {
     const side = turn === 'w' ? 0 : 1;
     const idx = rankBoard(b) * 2 + side;
     const v = entry.val[idx];
-    const dtc = entry.dtc[idx];
-    if (v === WIN) return { result: 'win', dtc };
-    if (v === LOSS) return { result: 'loss', dtc };
-    if (v === DRAW) return { result: 'draw', dtc };
+    const dtw = entry.dtw[idx];
+    if (v === WIN) return { result: 'win', dtw };
+    if (v === LOSS) return { result: 'loss', dtw };
+    if (v === DRAW) return { result: 'draw', dtw };
     return null;
   }
 }

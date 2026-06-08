@@ -34,7 +34,7 @@ for (const [wQ, wB, bQ, bB] of sigs) {
   let k = 0;
   for (let r = 0; r < perm; r++) { const bn = boardNumOf(unrankBoard(r, wQ, wB, bQ, bB)); keys[k++] = bn * 2; keys[k++] = bn * 2 + 1; }
   keys.sort();
-  layers.set(sig, { keys, val: null, dtc: null });
+  layers.set(sig, { keys, val: null, dtw: null });
 }
 solveAll(layers, {});
 

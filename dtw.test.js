@@ -45,9 +45,9 @@ function boardNumOf(b) { let n = 0; for (let i = 0; i < SIZE; i++) n += b[i] * P
 // wipeouts (child mover has no pieces) which the file does not store.
 function childVerdict(child) {
   const mover = child.turn;
-  if (engine.countPieces(child, mover) === 0) return { result: 'loss', dtc: 0 }; // wiped out
+  if (engine.countPieces(child, mover) === 0) return { result: 'loss', dtw: 0 }; // wiped out
   const opp = mover === 'w' ? 'b' : 'w';
-  if (engine.countPieces(child, opp) === 0) return { result: 'win', dtc: 0 };    // already won
+  if (engine.countPieces(child, opp) === 0) return { result: 'win', dtw: 0 };    // already won
   return tb.probe(child.board, child.turn);
 }
 
@@ -69,14 +69,14 @@ for (const [wQ, wB, bQ, bB] of allSignatures(K)) {
       for (const m of moves) {
         const cv = childVerdict(engine.applyMove(state, m));
         // child perspective -> from OUR perspective: child 'loss' => we win
-        if (cv.result === 'loss') { anyLoss = true; if (cv.dtc < minLoss) minLoss = cv.dtc; allWin = false; }
+        if (cv.result === 'loss') { anyLoss = true; if (cv.dtw < minLoss) minLoss = cv.dtw; allWin = false; }
         else if (cv.result === 'draw') { anyDraw = true; allWin = false; }
-        if (cv.dtc > maxAll) maxAll = cv.dtc;
+        if (cv.dtw > maxAll) maxAll = cv.dtw;
       }
       let want;
-      if (pr.result === 'win') want = anyLoss && pr.dtc === 1 + minLoss;
-      else if (pr.result === 'loss') want = allWin && pr.dtc === 1 + maxAll;
-      else want = pr.dtc === 0 && !anyLoss && anyDraw; // draw
+      if (pr.result === 'win') want = anyLoss && pr.dtw === 1 + minLoss;
+      else if (pr.result === 'loss') want = allWin && pr.dtw === 1 + maxAll;
+      else want = pr.dtw === 0 && !anyLoss && anyDraw; // draw
       if (!want) {
         bad++;
         if (examples.length < 8) examples.push({

@@ -45,11 +45,12 @@ replay.
 | `engine.js` | Rules: board, move generation, application, terminal/repetition, perft, `Game` driver. |
 | `tablebase.js` | Retrograde **exact** WLD + distance-to-win solver (`solveAll`) over piece-count-bounded layers, with combinatorial ranking and a packed hash set. |
 | `build-tablebase.js` | Enumerate every position with ≤ K pieces, solve it, and write a dense `tb.K{K}.bin`. |
-| `tbprobe.js` | O(1) loader/probe of a `tb.K*.bin` for an engine board + side to move → `{result, dtc}`. |
+| `tbprobe.js` | O(1) loader/probe of a `tb.K*.bin` for an engine board + side to move → `{result, dtw}`. |
 | `eval.js` | Heuristic evaluation above the tablebase frontier: material + promotion-race proximity + mobility. |
 | `search.js` | Iterative-deepening alpha-beta (negamax) with quiescence over captures/promotions, an exact tablebase cutoff, a bounded transposition table in typed arrays, path repetition detection, and MVV-LVA + killer move ordering. |
 | `server.js` | HTTP server: serves the UI and exposes `/api/newgame` and `/api/move`. All rules and the engine run server-side. |
 | `public/` | Thin browser client (board renderer + click handling). |
+| `hardest.js` | Scans the tablebase for the **longest forced wins** (max DTW) and prints the top-N hardest positions + per-signature maxima. |
 
 ### The tablebase is exact, and provably so
 
@@ -81,7 +82,14 @@ node tablebase.test.js                               # ranking, predecessors, pa
 node --max-old-space-size=2048 solver.test.js        # solveAll vs brute-force minimax (slow)
 node --max-old-space-size=2048 search.test.js        # search: legality, TB agreement, self-play, endgame conversion
 node --max-old-space-size=2048 dtw.test.js tb.K5.bin 5  # distance-to-win recurrence holds for every probed position
+node --max-old-space-size=2048 dtw-forceplay.test.js tb.K5.bin 5  # DTW confirmed by direct forced-play: optimal games last exactly DTW plies
 ```
+
+`dtw.test.js` checks the local one-ply DTW recurrence everywhere; `dtw-forceplay.test.js`
+is the end-to-end cross-check — it *plays games out* on `engine.js` (winner
+minimising distance, loser stalling) for the longest wins plus a strided sweep,
+and confirms each forced game ends in a wipeout in **exactly** the stored DTW
+number of plies. Together they are why the "longest win" figures below are trusted.
 
 Rebuild and re-validate a tablebase (round-trips solver ↔ file, must report 0
 mismatches):

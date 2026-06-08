@@ -8,7 +8,7 @@
  *     (this variant is almost entirely tactical sliding captures, so a static
  *     leaf would be wildly horizon-sensitive).
  *   - Exact endgame tablebase cutoff: any node with <= K pieces returns the
- *     tablebase's WLD verdict (with distance-to-conversion), i.e. perfect play.
+ *     tablebase's WLD verdict (with distance-to-win), i.e. perfect play.
  *   - Bounded transposition table in flat typed arrays (fixed capacity, never
  *     grows toward the 2 GB cap), depth-preferred replacement.
  *   - Repetition detection along the path (game history + current line): a
@@ -20,7 +20,7 @@
  *
  * Scores are from the side-to-move's perspective (negamax). Decisive scores:
  *   wipeout win  =  MATE - ply        wipeout loss  = -MATE + ply
- *   tablebase win = TBWIN - dtc       tablebase loss = -TBWIN + dtc   draw = 0
+ *   tablebase win = TBWIN - dtw       tablebase loss = -TBWIN + dtw   draw = 0
  * Any |score| > DECISIVE is "winning/losing for sure".
  */
 
@@ -149,8 +149,8 @@ class Engine {
     if (!this.tb) return null;
     const r = this.tb.probe(state.board, state.turn);
     if (!r) return null;
-    if (r.result === 'win') return TBWIN - r.dtc;
-    if (r.result === 'loss') return -TBWIN + r.dtc;
+    if (r.result === 'win') return TBWIN - r.dtw;
+    if (r.result === 'loss') return -TBWIN + r.dtw;
     return 0; // draw
   }
 
