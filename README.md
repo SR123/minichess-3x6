@@ -1,5 +1,17 @@
 # Minichess — 3×6 Bishops & Queens
 
+### ▶ Play the live demo: **https://sr123.github.io/minichess-3x6/**
+
+The live demo is the **featherweight, browser-only** build — it runs entirely in
+your browser with no server and covers endgames with **≤ 3 pieces** (longest
+forced win: 20 plies / 10 moves). The **full version** (≤ 5 pieces, with deeper
+forced wins up to **54 plies / 27 moves**, plus the playable engine and web UI)
+runs **locally from this repo**:
+
+```sh
+npm start          # then open http://localhost:8080  (study tool at /study)
+```
+
 A complete, **playable** engine for a small chess variant, plus a web UI to play
 against it.
 
